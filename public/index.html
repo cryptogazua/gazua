@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+    body {
+        font: 10px sans-serif;
+    }
+
+    text {
+        fill: #000;
+    }
+
+    path.candle {
+        stroke: #000000;
+    }
+
+    path.candle.body {
+        stroke-width: 0;
+    }
+
+    path.candle.up {
+        fill: #FF0000;
+        stroke: #FF0000;
+    }
+
+    path.candle.down {
+        fill: #0000FF;
+        stroke: #0000FF;
+    }
+</style>
+<body>
+<h1> Cryptogazua Dashboard </h1>
+<button>시세 갱신</button>
+<table id="mytable">
+<tr>
+  <td>author</td>
+  <td>permlink</td>
+  <td>최근갱신</td>
+  <td>keyword</td>
+  <td>title</td>
+</tr>
+<tbody></tbody>
+</table>
+<script src="http://d3js.org/d3.v4.min.js"></script>
+<script src="http://techanjs.org/techan.min.js"></script>
+<script src="https://code.jquery.com/jquery-1.9.1.js"></script>
+<script>
+    var margin = {top: 20, right: 20, bottom: 30, left: 50},
+            width = 960 - margin.left - margin.right,
+            height = 500 - margin.top - margin.bottom;
+
+    //var parseDate = d3.timeParse("%d-%b-%y");
+    //var parseDate = d3.timeParse("YYYY-MM-DDTHH:mm:ss.fffZ");
+    var parseDate = d3.timeParse("%Y-%m-%dT%H:%M:%S.%LZ");
+
+    var x = techan.scale.financetime()
+            .range([0, width]);
+
+    var y = d3.scaleLinear()
+            .range([height, 0]);
+
+    var candlestick = techan.plot.candlestick()
+            .xScale(x)
+            .yScale(y);
+
+    var xAxis = d3.axisBottom()
+            .scale(x);
+
+    var yAxis = d3.axisLeft()
+            .scale(y);
+
+    var svg = d3.select("body").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    d3.json("quote/BTC", function(error, data) {
+        var accessor = candlestick.accessor();
+
+        data = data.slice(0, 200).map(function(d) {
+            return {
+                date: parseDate(d.datetime),
+                //date: new Date(d.datetime),
+                open: +d.open,
+                high: +d.high,
+                low: +d.low,
+                close: +d.close
+            };
+        }).sort(function(a, b) { return d3.ascending(accessor.d(a), accessor.d(b)); });
+
+        svg.append("g")
+                .attr("class", "candlestick");
+
+        svg.append("g")
+                .attr("class", "x axis")
+                .attr("transform", "translate(0," + height + ")");
+
+        svg.append("g")
+                .attr("class", "y axis")
+                .append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("y", 6)
+                .attr("dy", ".71em")
+                .style("text-anchor", "end")
+                .text("Price (Won)");
+
+        // Data to display initially
+        draw(data.slice(0, data.length-20));
+
+        /*var tooltipDiv = d3.select("body").append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0);
+        svg.append('rect').attr('class', 'overlay')
+          .attr('width', width).attr('height', height)
+    	    .on("mouseover", function() {
+            tooltipDiv.style('opacity', 1);
+            //focus.style("display", null);
+          }).on("mouseout", function() {
+            tooltipDiv.style('opacity', 0);
+            //focus.style("display", "none");
+          }).style('fill', 'none').style('pointer-events', 'all').on('mousemove', function() {
+            var x0 = x.invert(d3.mouse(this)[0]),
+                //i = bisect(data, x0, 1),
+                d0 = data[i-1],
+                d1 = data[i],
+                d = x0 - d0.date > d1.date - x0 ? d1 : d0;
+
+            var text = 'Date: ' + d3.timeFormat('%a %d %b %Y')(d.date);
+            ['open', 'high', 'low', 'close'].forEach(function(key) {
+              	text += '<br>' + key + ': ' + d[key];
+            });
+            tooltipDiv.style('left', d3.event.pageX+5+'px')
+            	.style('top', d3.event.pageY-30+'px')
+            	.html(text.trim());
+          });*/
+
+        // Only want this button to be active if the data has loaded
+        d3.select("button").on("click", function() { draw(data); }).style("display", "inline");
+    });
+
+
+        function draw(data) {
+            x.domain(data.map(candlestick.accessor().d));
+            y.domain(techan.scale.plot.ohlc(data, candlestick.accessor()).domain());
+
+            svg.selectAll("g.candlestick").datum(data).call(candlestick);
+            svg.selectAll("g.x.axis").call(xAxis);
+            svg.selectAll("g.y.axis").call(yAxis);
+        }
+
+        $.get("./article/btc").success(function(res){
+          for(var i=0;i<res.length;i++){
+            $('#mytable > tbody:last').append('<tr><td>' + res[i].author + '</td><td>' + res[i].permlink+'</td><td>' + res[i].LAST_UPDATE + '</td><td>'+res[i].keyword+ '</td><td>'+ res[i].title +'</td></tr>');
+          }
+        });
+        /*function output_result(id, name, obj){
+          var chg = parseFloat(obj.change);
+          var ns = "", nl = "";
+          var align = "style='text-align:right;font-family:돋움;'";
+
+          $(id).append("<td style='font-family:돋움;'>"+ns+name+nl+"</td><td "+align+">"+obj.date+"</td><td "+align+">"+obj.open+"</td><td "+align+">"+obj.high+"</td><td "+align+">"+obj.low+"</td><td "+align+">"+obj.price+"</td><td "+align+">"+obj.change+"</td><td "+align+">"+obj.chgrate+"</td>");
+        }
+
+        function show_result(result, type, jisu_code, jisu_name, jisu_scrap_src) {
+          for(var i=0;i<jisu_code.length;i++) {
+            $(result).append("<tr id='" + type + i + "'></tr>");
+          }
+          for(var i=0;i<jisu_code.length;i++) {
+            if(jisu_code[i] !== "" && jisu_code[i] !== "")
+            {
+              (function(i) {
+                $.get("./" + jisu_code[i] + "/" + jisu_scrap_src[i]).success(function(res){
+                  output_result("#"+type+i, jisu_name[i],res);
+                }).fail(function(){
+                  $("#"+type+i).append("<td colspan=4><font color='red'><b>데이터 가져오기 실패</b></font></td>");
+                });
+          })(i);*/
+    </script>
+    </body>
+    </html>
