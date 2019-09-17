@@ -11,7 +11,7 @@ function select_query(res, sql, arr) {
     if(err) return res.send(err);
     conn.query(sql, arr, (err, rows) => {
       if(err) return res.send(err);
-      conn.release();
+      //conn.release();
       console.log(rows);
       res.send(rows);
     });
@@ -23,10 +23,17 @@ function select_query(res, sql, arr) {
 require('events').EventEmitter.defaultMaxListeners = 0;
 
 app.use(express.static(path.join(__dirname, 'public')));
+// view engine setup
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'ejs');
+app.get('/:currency', function(req, res) {
+  res.render('index', { 'currency': req.params.currency });
+});
+
 
 app.get('/quote/:currency', function(req, res) {
   var currency = req.params.currency;
-  var sql = "SELECT currency, (datetime + INTERVAL 18 hour) AS datetime, open, high, low, close FROM quote ";
+  var sql = "SELECT currency, (datetime + INTERVAL 9 hour) AS datetime, open, high, low, close FROM quote ";
   var arr = [currency];
   sql += "WHERE currency=? order by datetime desc"
   select_query(res, sql, arr);
@@ -34,7 +41,7 @@ app.get('/quote/:currency', function(req, res) {
 });
 app.get('/article/:currency', function(req, res) {
   var currency = req.params.currency;
-  var sql = "select author, permlink, (LAST_UPDATE + INTERVAL 18 hour) AS LAST_UPDATE, keyword, title from Steemit_MT "
+  var sql = "select author, permlink, (LAST_UPDATE + INTERVAL 9 hour) AS LAST_UPDATE, keyword, title from Steemit_MT "
   var arr = [currency];
   sql += "WHERE keyword=? order by LAST_UPDATE desc limit 10"
   select_query(res, sql, arr);
